@@ -51,11 +51,15 @@ cp config.example.yaml config.yaml
 ```
 
 В `config.yaml` укажите:
-- `ccxt.apiKey` и `ccxt.secret` — ключи Bybit (для тестов `testnet: true`).
 - `symbol`, `timeframe` — торговый инструмент и таймфрейм (например, `BTCUSDT`, `1h`).
 - Параметры риска: `risk_per_trade`, `tp_atr_mult`, `sl_atr_mult`, `prob_threshold`.
 - Комиссии: `maker_fee`, `taker_fee`.
 - Пути: `paths.db_url`, `paths.models_dir`, `paths.logs_dir`.
+
+Укажите свои ключи в `.env`:
+ - `BYBIT_API_KEY=ваш_ключ`
+ - `BYBIT_API_SECRET=ваш_секрет`
+ - `MODE=paper`
 
 ---
 

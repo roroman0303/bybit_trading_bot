@@ -1,4 +1,5 @@
 import ccxt
+import config  # новый модуль
 from utils.timeframes import to_ccxt_tf
 
 class Exchange:
@@ -6,14 +7,14 @@ class Exchange:
         options = cfg.get('ccxt', {})
         self.symbol = cfg['symbol']
         self.timeframe = to_ccxt_tf(cfg['timeframe'])
-        self.testnet = cfg.get('testnet', True)
+        use_testnet = (config.MODE != "real")
         self.ex = ccxt.bybit({
-            "apiKey": options.get("apiKey"),
-            "secret": options.get("secret"),
+            "apiKey": config.BYBIT_API_KEY,
+            "secret": config.BYBIT_API_SECRET,
             "enableRateLimit": options.get("enableRateLimit", True),
-            "options": options.get("options", {"defaultType":"swap"})
+            "options": options.get("options", {"defaultType": "swap"})
         })
-        if self.testnet:
+        if use_testnet:
             self.ex.set_sandbox_mode(True)
     def fetch_ohlcv(self, limit=500): return self.ex.fetch_ohlcv(self.symbol, timeframe=self.timeframe, limit=limit)
     def fetch_ticker(self): return self.ex.fetch_ticker(self.symbol)
