@@ -22,4 +22,4 @@ paths:
   models_dir: "models"
   logs_dir: "logs"
 data:
-  csv_path: "data/BTCUSDT_1H.csv"
+  csv_path: "data/BTCUSDT_1h.csv"

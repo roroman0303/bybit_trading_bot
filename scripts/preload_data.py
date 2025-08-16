@@ -1,70 +1,58 @@
 import argparse
-import csv
-import os
-import requests
+import ccxt
+import pandas as pd
+import time
 from datetime import datetime
 
-BASE_URL = "https://api.bybit.com/v5/market/kline"
-
-def fetch_klines(symbol: str, interval: str, start: int, end: int, limit: int = 1000):
-    params = {
-        "category": "linear",
-        "symbol": symbol,
-        "interval": interval,
-        "start": start,
-        "end": end,
-        "limit": limit,
-    }
-    r = requests.get(BASE_URL, params=params, timeout=10)
-    r.raise_for_status()
-    data = r.json()
-    if "result" not in data or "list" not in data["result"]:
-        return []
-    return data["result"]["list"]
-
-def parse_date(date_str: str) -> int:
-    return int(datetime.strptime(date_str, "%Y-%m-%d").timestamp() * 1000)
-
-def save_to_csv(data, output):
-    os.makedirs(os.path.dirname(output), exist_ok=True)
-    with open(output, "w", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        writer.writerow(["timestamp", "open", "high", "low", "close", "volume"])
-        for row in data:
-            ts = int(row[0])
-            open_, high, low, close, volume = row[1:6]
-            writer.writerow([ts, open_, high, low, close, volume])
-
-def main():
-    parser = argparse.ArgumentParser(description="Загрузка исторических данных с Bybit")
-    parser.add_argument("--symbol", required=True, help="Торговая пара, например BTCUSDT")
-    parser.add_argument("--timeframe", required=True, help="Таймфрейм (1,3,5,15,30,60,240,D,M,W)")
-    parser.add_argument("--start", required=True, help="Начальная дата в формате YYYY-MM-DD")
-    parser.add_argument("--end", required=True, help="Конечная дата в формате YYYY-MM-DD")
-    parser.add_argument("--output", required=True, help="Путь для сохранения CSV")
-    args = parser.parse_args()
-
-    start_ts = parse_date(args.start)
-    end_ts = parse_date(args.end)
-
-    all_candles = []
-    chunk = 1000
-
-    print(f"📥 Загружаем {args.symbol} {args.timeframe} с {args.start} по {args.end}...")
-
-    current = start_ts
-    while current < end_ts:
-        candles = fetch_klines(args.symbol, args.timeframe, current, end_ts, limit=chunk)
+def fetch_ohlcv(symbol, timeframe, since, until, limit=1000):
+    all_data = []
+    while since < until:
+        candles = exchange.fetch_ohlcv(symbol, timeframe, since, limit)
         if not candles:
             break
-        candles_sorted = sorted(candles, key=lambda x: int(x[0]))
-        all_candles.extend(candles_sorted)
-        last_ts = int(candles_sorted[-1][0])
-        current = last_ts + 1
-        print(f"Загружено {len(all_candles)} свечей...")
+        all_data.extend(candles)
+        since = candles[-1][0] + timeframe_to_ms(timeframe)
+        time.sleep(exchange.rateLimit / 1000)  # уважение к API
+        if since >= until:
+            break
+    return all_data
 
-    save_to_csv(all_candles, args.output)
-    print(f"✅ Данные сохранены в {args.output}, всего {len(all_candles)} свечей")
+def timeframe_to_ms(tf: str) -> int:
+    """Перевод таймфрейма ccxt (1m, 5m, 1h, 1d, 1w, 1M) в миллисекунды"""
+    unit = tf[-1]
+    num = int(tf[:-1])
+    if unit == 'm':
+        return num * 60 * 1000
+    if unit == 'h':
+        return num * 60 * 60 * 1000
+    if unit == 'd':
+        return num * 24 * 60 * 60 * 1000
+    if unit == 'w':
+        return num * 7 * 24 * 60 * 60 * 1000
+    if unit == 'M':
+        return num * 30 * 24 * 60 * 60 * 1000
+    raise ValueError(f"Неподдерживаемый таймфрейм: {tf}")
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--symbol", type=str, required=True, help="Например: BTCUSDT")
+    parser.add_argument("--timeframe", type=str, required=True, help="Например: 1h, 15m, 1d")
+    parser.add_argument("--start", type=str, required=True, help="Формат YYYY-MM-DD")
+    parser.add_argument("--end", type=str, required=True, help="Формат YYYY-MM-DD")
+    args = parser.parse_args()
+
+    exchange = ccxt.bybit({"enableRateLimit": True, "options": {"defaultType": "future"}})
+
+    start_ts = int(datetime.strptime(args.start, "%Y-%m-%d").timestamp() * 1000)
+    end_ts = int(datetime.strptime(args.end, "%Y-%m-%d").timestamp() * 1000)
+
+    print(f"Загружаем {args.symbol} {args.timeframe} с {args.start} по {args.end}...")
+
+    data = fetch_ohlcv(args.symbol, args.timeframe, start_ts, end_ts)
+
+    df = pd.DataFrame(data, columns=["timestamp", "open", "high", "low", "close", "volume"])
+    df["datetime"] = pd.to_datetime(df["timestamp"], unit="ms")
+
+    output_path = f"data/{args.symbol}_{args.timeframe}.csv"
+    df.to_csv(output_path, index=False)
+    print(f"Сохранено {len(df)} свечей в {output_path}")

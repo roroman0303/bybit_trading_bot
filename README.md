@@ -68,7 +68,7 @@ cp config.example.yaml config.yaml
 Обучите модель на исторических данных перед запуском бота:
 
 ```bash
-python scripts/train_offline.py --config config.yaml --csv data/BTCUSDT_1H.csv --symbol BTCUSDT --timeframe 1h
+python scripts/train_offline.py --config config.yaml --csv data/BTCUSDT_1h.csv --symbol BTCUSDT --timeframe 1h
 ```
 
 Требуемый CSV-формат:
@@ -86,7 +86,7 @@ time,open,high,low,close,volume
 Запустите бэктест с учётом комиссий и риск-менеджмента:
 
 ```bash
-python run_backtest.py --config config.yaml --csv data/BTCUSDT_1H.csv
+python run_backtest.py --config config.yaml --csv data/BTCUSDT_1h.csv
 ```
 
 Что делает бэктестер (`backtester/backtest.py`):
@@ -145,7 +145,7 @@ python run_live.py --config config.yaml --resume
 Docker:
 ```bash
 docker build -t bybit-ml-bot -f docker/Dockerfile .
-docker run -it --rm -v $PWD:/app -w /app bybit-ml-bot python run_backtest.py --config config.yaml --csv data/BTCUSDT_1H.csv
+docker run -it --rm -v $PWD:/app -w /app bybit-ml-bot python run_backtest.py --config config.yaml --csv data/BTCUSDT_1h.csv
 ```
 
 ---
@@ -165,19 +165,19 @@ docker run -it --rm -v $PWD:/app -w /app bybit-ml-bot python run_backtest.py --c
 ### Обучение модели
 ```bash
 # вариант 1: запуск напрямую
-python scripts/train_offline.py --config config.yaml --csv data/BTCUSDT_1H.csv --symbol BTCUSDT --timeframe 1h
+python scripts/train_offline.py --config config.yaml --csv data/BTCUSDT_1h.csv --symbol BTCUSDT --timeframe 1h
 
 # вариант 2: запуск через пакет
-python -m scripts.train_offline --config config.yaml --csv data/BTCUSDT_1H.csv --symbol BTCUSDT --timeframe 1h
+python -m scripts.train_offline --config config.yaml --csv data/BTCUSDT_1h.csv --symbol BTCUSDT --timeframe 1h
 ```
 
 ### Бэктест стратегии
 ```bash
 # вариант 1: запуск напрямую
-python run_backtest.py --config config.yaml --csv data/BTCUSDT_1H.csv --symbol BTCUSDT --timeframe 1h
+python run_backtest.py --config config.yaml --csv data/BTCUSDT_1h.csv --symbol BTCUSDT --timeframe 1h
 
 # вариант 2: запуск через пакет
-python -m run_backtest --config config.yaml --csv data/BTCUSDT_1H.csv --symbol BTCUSDT --timeframe 1h
+python -m run_backtest --config config.yaml --csv data/BTCUSDT_1h.csv --symbol BTCUSDT --timeframe 1h
 ```
 
 
@@ -186,15 +186,14 @@ python -m run_backtest --config config.yaml --csv data/BTCUSDT_1H.csv --symbol B
 Для подгрузки котировок с Bybit в CSV используйте скрипт:
 
 ```bash
-python scripts/preload_data.py --symbol BTCUSDT --timeframe 60 --start 2023-01-01 --end 2023-12-31 --output data/BTCUSDT_1H.csv
+python scripts/preload_data.py --symbol BTCUSDT --timeframe 1h --start 2023-01-01 --end 2023-12-31
 ```
 
 Параметры:
 - `--symbol` — торговая пара (например, BTCUSDT)
-- `--timeframe` — таймфрейм (1,3,5,15,30,60,240,D,M,W)
+- `--timeframe` — таймфрейм (1h, 15m, 1d)
 - `--start` — начальная дата (формат YYYY-MM-DD)
 - `--end` — конечная дата (формат YYYY-MM-DD)
-- `--output` — путь для сохранения файла CSV
 
 После этого файл можно использовать в `train_offline.py` и `run_backtest.py`.
 
